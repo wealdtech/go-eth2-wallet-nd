@@ -22,21 +22,21 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/pkg/errors"
-	etypes "github.com/wealdtech/go-eth2-types"
+	e2types "github.com/wealdtech/go-eth2-types/v2"
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
-	types "github.com/wealdtech/go-eth2-wallet-types"
+	wtypes "github.com/wealdtech/go-eth2-wallet-types/v2"
 )
 
 // account contains the details of the account.
 type account struct {
 	id        uuid.UUID
 	name      string
-	publicKey etypes.PublicKey
+	publicKey e2types.PublicKey
 	crypto    map[string]interface{}
-	secretKey etypes.PrivateKey
+	secretKey e2types.PrivateKey
 	version   uint
-	wallet    types.Wallet
-	encryptor types.Encryptor
+	wallet    wtypes.Wallet
+	encryptor wtypes.Encryptor
 	mutex     *sync.RWMutex
 }
 
@@ -109,7 +109,7 @@ func (a *account) UnmarshalJSON(data []byte) error {
 		if err != nil {
 			return err
 		}
-		a.publicKey, err = etypes.BLSPublicKeyFromBytes(bytes)
+		a.publicKey, err = e2types.BLSPublicKeyFromBytes(bytes)
 		if err != nil {
 			return err
 		}
@@ -155,18 +155,18 @@ func (a *account) Name() string {
 }
 
 // PublicKey provides the public key for the account.
-func (a *account) PublicKey() etypes.PublicKey {
+func (a *account) PublicKey() e2types.PublicKey {
 	// Safe to ignore the error as this is already a public key
-	keyCopy, _ := etypes.BLSPublicKeyFromBytes(a.publicKey.Marshal())
+	keyCopy, _ := e2types.BLSPublicKeyFromBytes(a.publicKey.Marshal())
 	return keyCopy
 }
 
 // PrivateKey provides the private key for the account.
-func (a *account) PrivateKey() (etypes.PrivateKey, error) {
+func (a *account) PrivateKey() (e2types.PrivateKey, error) {
 	if !a.IsUnlocked() {
 		return nil, errors.New("cannot provide private key when account is locked")
 	}
-	return etypes.BLSPrivateKeyFromBytes(a.secretKey.Marshal())
+	return e2types.BLSPrivateKeyFromBytes(a.secretKey.Marshal())
 }
 
 // Lock locks the account.  A locked account cannot sign data.
@@ -185,7 +185,7 @@ func (a *account) Unlock(passphrase []byte) error {
 	if err != nil {
 		return errors.New("incorrect passphrase")
 	}
-	secretKey, err := etypes.BLSPrivateKeyFromBytes(secretBytes)
+	secretKey, err := e2types.BLSPrivateKeyFromBytes(secretBytes)
 	if err != nil {
 		return err
 	}
@@ -208,13 +208,13 @@ func (a *account) Path() string {
 }
 
 // Sign signs data.
-func (a *account) Sign(data []byte, domain uint64) (etypes.Signature, error) {
+func (a *account) Sign(data []byte) (e2types.Signature, error) {
 	a.mutex.RLock()
 	defer a.mutex.RUnlock()
 	if !a.IsUnlocked() {
 		return nil, errors.New("cannot sign when account is locked")
 	}
-	return a.secretKey.Sign(data, domain), nil
+	return a.secretKey.Sign(data), nil
 }
 
 // storeAccount stores the accout.
@@ -235,7 +235,7 @@ func (a *account) storeAccount() error {
 }
 
 // deserializeAccount deserializes account data to an account.
-func deserializeAccount(w *wallet, data []byte) (types.Account, error) {
+func deserializeAccount(w *wallet, data []byte) (wtypes.Account, error) {
 	a := newAccount()
 	a.wallet = w
 	a.encryptor = w.encryptor

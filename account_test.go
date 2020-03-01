@@ -21,9 +21,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
-	nd "github.com/wealdtech/go-eth2-wallet-nd"
+	nd "github.com/wealdtech/go-eth2-wallet-nd/v2"
 	scratch "github.com/wealdtech/go-eth2-wallet-store-scratch"
-	types "github.com/wealdtech/go-eth2-wallet-types"
+	wtypes "github.com/wealdtech/go-eth2-wallet-types/v2"
 )
 
 // _byteArray is a helper to turn a string in to a byte array
@@ -126,7 +126,7 @@ func TestImportAccount(t *testing.T) {
 	require.Nil(t, err)
 
 	// Try to import without unlocking the wallet; should fail
-	_, err = wallet.(types.WalletAccountImporter).ImportAccount("attempt", _byteArray("220091d10843519cd1c452a4ec721d378d7d4c5ece81c4b5556092d410e5e0e1"), []byte("test"))
+	_, err = wallet.(wtypes.WalletAccountImporter).ImportAccount("attempt", _byteArray("220091d10843519cd1c452a4ec721d378d7d4c5ece81c4b5556092d410e5e0e1"), []byte("test"))
 	assert.NotNil(t, err)
 
 	err = wallet.Unlock(nil)
@@ -134,7 +134,7 @@ func TestImportAccount(t *testing.T) {
 	defer wallet.Lock()
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			account, err := wallet.(types.WalletAccountImporter).ImportAccount(test.accountName, test.key, test.passphrase)
+			account, err := wallet.(wtypes.WalletAccountImporter).ImportAccount(test.accountName, test.key, test.passphrase)
 			if test.err != nil {
 				require.NotNil(t, err)
 				assert.Equal(t, test.err.Error(), err.Error())
@@ -143,11 +143,11 @@ func TestImportAccount(t *testing.T) {
 				assert.Equal(t, test.accountName, account.Name())
 				assert.Equal(t, "", account.Path())
 				// Should not be able to obtain private key from a locked account
-				_, err = account.(types.AccountPrivateKeyProvider).PrivateKey()
+				_, err = account.(wtypes.AccountPrivateKeyProvider).PrivateKey()
 				assert.NotNil(t, err)
 				err = account.Unlock(test.passphrase)
 				require.Nil(t, err)
-				_, err := account.(types.AccountPrivateKeyProvider).PrivateKey()
+				_, err := account.(wtypes.AccountPrivateKeyProvider).PrivateKey()
 				assert.Nil(t, err)
 			}
 		})

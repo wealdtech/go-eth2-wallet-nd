@@ -18,7 +18,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
-	nd "github.com/wealdtech/go-eth2-wallet-nd"
+	nd "github.com/wealdtech/go-eth2-wallet-nd/v2"
 	scratch "github.com/wealdtech/go-eth2-wallet-store-scratch"
 )
 

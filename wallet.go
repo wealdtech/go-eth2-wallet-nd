@@ -22,8 +22,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/pkg/errors"
 	"github.com/wealdtech/go-ecodec"
-	etypes "github.com/wealdtech/go-eth2-types"
-	types "github.com/wealdtech/go-eth2-wallet-types"
+	e2types "github.com/wealdtech/go-eth2-types/v2"
+	wtypes "github.com/wealdtech/go-eth2-wallet-types/v2"
 	"github.com/wealdtech/go-indexer"
 )
 
@@ -37,8 +37,8 @@ type wallet struct {
 	id        uuid.UUID
 	name      string
 	version   uint
-	store     types.Store
-	encryptor types.Encryptor
+	store     wtypes.Store
+	encryptor wtypes.Encryptor
 	mutex     *sync.RWMutex
 	unlocked  bool
 	index     *indexer.Index
@@ -129,7 +129,7 @@ func (w *wallet) UnmarshalJSON(data []byte) error {
 
 // CreateWallet creates a new wallet with the given name and stores it in the provided store.
 // This will error if the wallet already exists.
-func CreateWallet(name string, store types.Store, encryptor types.Encryptor) (types.Wallet, error) {
+func CreateWallet(name string, store wtypes.Store, encryptor wtypes.Encryptor) (wtypes.Wallet, error) {
 	// First, try to open the wallet.
 	_, err := OpenWallet(name, store, encryptor)
 	if err == nil {
@@ -152,7 +152,7 @@ func CreateWallet(name string, store types.Store, encryptor types.Encryptor) (ty
 }
 
 // OpenWallet opens an existing wallet with the given name.
-func OpenWallet(name string, store types.Store, encryptor types.Encryptor) (types.Wallet, error) {
+func OpenWallet(name string, store wtypes.Store, encryptor wtypes.Encryptor) (wtypes.Wallet, error) {
 	data, err := store.RetrieveWallet(name)
 	if err != nil {
 		return nil, errors.Wrapf(err, "wallet %q does not exist", name)
@@ -161,7 +161,7 @@ func OpenWallet(name string, store types.Store, encryptor types.Encryptor) (type
 }
 
 // DeserializeWallet deserializes a wallet from its byte-level representation
-func DeserializeWallet(data []byte, store types.Store, encryptor types.Encryptor) (types.Wallet, error) {
+func DeserializeWallet(data []byte, store wtypes.Store, encryptor wtypes.Encryptor) (wtypes.Wallet, error) {
 	wallet := newWallet()
 	if err := json.Unmarshal(data, wallet); err != nil {
 		return nil, errors.Wrap(err, "wallet corrupt")
@@ -231,7 +231,7 @@ func (w *wallet) storeWallet() error {
 
 // CreateAccount creates a new account in the wallet.
 // The only rule for names is that they cannot start with an underscore (_) character.
-func (w *wallet) CreateAccount(name string, passphrase []byte) (types.Account, error) {
+func (w *wallet) CreateAccount(name string, passphrase []byte) (wtypes.Account, error) {
 	if name == "" {
 		return nil, errors.New("account name missing")
 	}
@@ -253,7 +253,7 @@ func (w *wallet) CreateAccount(name string, passphrase []byte) (types.Account, e
 		return nil, err
 	}
 	a.name = name
-	privateKey, err := etypes.GenerateBLSPrivateKey()
+	privateKey, err := e2types.GenerateBLSPrivateKey()
 	if err != nil {
 		return nil, err
 	}
@@ -279,7 +279,7 @@ func (w *wallet) CreateAccount(name string, passphrase []byte) (types.Account, e
 // ImportAccount creates a new account in the wallet from an existing private key.
 // The only rule for names is that they cannot start with an underscore (_) character.
 // This will error if an account with the name already exists.
-func (w *wallet) ImportAccount(name string, key []byte, passphrase []byte) (types.Account, error) {
+func (w *wallet) ImportAccount(name string, key []byte, passphrase []byte) (wtypes.Account, error) {
 	if name == "" {
 		return nil, errors.New("account name missing")
 	}
@@ -302,7 +302,7 @@ func (w *wallet) ImportAccount(name string, key []byte, passphrase []byte) (type
 		return nil, err
 	}
 	a.name = name
-	privateKey, err := etypes.BLSPrivateKeyFromBytes(key)
+	privateKey, err := e2types.BLSPrivateKeyFromBytes(key)
 	if err != nil {
 		return nil, err
 	}
@@ -322,8 +322,8 @@ func (w *wallet) ImportAccount(name string, key []byte, passphrase []byte) (type
 }
 
 // Accounts provides all accounts in the wallet.
-func (w *wallet) Accounts() <-chan types.Account {
-	ch := make(chan types.Account, 1024)
+func (w *wallet) Accounts() <-chan wtypes.Account {
+	ch := make(chan wtypes.Account, 1024)
 	go func() {
 		for data := range w.store.RetrieveAccounts(w.ID()) {
 			if a, err := deserializeAccount(w, data); err == nil {
@@ -361,7 +361,7 @@ func (w *wallet) Export(passphrase []byte) ([]byte, error) {
 }
 
 // Import imports the entire wallet, protected by an additional passphrase.
-func Import(encryptedData []byte, passphrase []byte, store types.Store, encryptor types.Encryptor) (types.Wallet, error) {
+func Import(encryptedData []byte, passphrase []byte, store wtypes.Store, encryptor wtypes.Encryptor) (wtypes.Wallet, error) {
 	type walletExt struct {
 		Wallet   *wallet    `json:"wallet"`
 		Accounts []*account `json:"accounts"`
@@ -408,7 +408,7 @@ func Import(encryptedData []byte, passphrase []byte, store types.Store, encrypto
 
 // AccountByName provides a single account from the wallet given its name.
 // This will error if the account is not found.
-func (w *wallet) AccountByName(name string) (types.Account, error) {
+func (w *wallet) AccountByName(name string) (wtypes.Account, error) {
 	id, exists := w.index.ID(name)
 	if !exists {
 		return nil, fmt.Errorf("no account with name %q", name)
@@ -418,7 +418,7 @@ func (w *wallet) AccountByName(name string) (types.Account, error) {
 
 // AccountByID provides a single account from the wallet given its ID.
 // This will error if the account is not found.
-func (w *wallet) AccountByID(id uuid.UUID) (types.Account, error) {
+func (w *wallet) AccountByID(id uuid.UUID) (wtypes.Account, error) {
 	data, err := w.store.RetrieveAccount(w.id, id)
 	if err != nil {
 		return nil, err
@@ -427,7 +427,7 @@ func (w *wallet) AccountByID(id uuid.UUID) (types.Account, error) {
 }
 
 // Store returns the wallet's store.
-func (w *wallet) Store() types.Store {
+func (w *wallet) Store() wtypes.Store {
 	return w.store
 }
 

@@ -19,9 +19,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
-	nd "github.com/wealdtech/go-eth2-wallet-nd"
+	nd "github.com/wealdtech/go-eth2-wallet-nd/v2"
 	scratch "github.com/wealdtech/go-eth2-wallet-store-scratch"
-	types "github.com/wealdtech/go-eth2-wallet-types"
+	wtypes "github.com/wealdtech/go-eth2-wallet-types/v2"
 )
 
 func TestExportWallet(t *testing.T) {
@@ -37,7 +37,7 @@ func TestExportWallet(t *testing.T) {
 	account2, err := wallet.CreateAccount("Account 2", []byte{})
 	require.Nil(t, err)
 
-	dump, err := wallet.(types.WalletExporter).Export([]byte("dump"))
+	dump, err := wallet.(wtypes.WalletExporter).Export([]byte("dump"))
 	require.Nil(t, err)
 
 	// Import it
