@@ -15,13 +15,22 @@ package nd
 
 import (
 	"encoding/json"
+	"os"
 	"testing"
 
 	"github.com/google/uuid"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	e2types "github.com/wealdtech/go-eth2-types/v2"
 )
+
+func TestMain(m *testing.M) {
+	if err := e2types.InitBLS(); err != nil {
+		os.Exit(1)
+	}
+	os.Exit(m.Run())
+}
 
 func TestUnmarshalAccount(t *testing.T) {
 	tests := []struct {
