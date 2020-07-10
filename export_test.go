@@ -14,6 +14,7 @@
 package nd_test
 
 import (
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -21,34 +22,36 @@ import (
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 	nd "github.com/wealdtech/go-eth2-wallet-nd/v2"
 	scratch "github.com/wealdtech/go-eth2-wallet-store-scratch"
-	wtypes "github.com/wealdtech/go-eth2-wallet-types/v2"
+	e2wtypes "github.com/wealdtech/go-eth2-wallet-types/v2"
 )
 
 func TestExportWallet(t *testing.T) {
 	store := scratch.New()
 	encryptor := keystorev4.New()
-	wallet, err := nd.CreateWallet("test wallet", store, encryptor)
+	wallet, err := nd.CreateWallet(context.Background(), "test wallet", store, encryptor)
 	require.Nil(t, err)
-	err = wallet.Unlock([]byte{})
-	require.Nil(t, err)
-
-	account1, err := wallet.(wtypes.WalletAccountCreator).CreateAccount("Account 1", []byte{})
-	require.Nil(t, err)
-	account2, err := wallet.(wtypes.WalletAccountCreator).CreateAccount("Account 2", []byte{})
+	locker, isLocker := wallet.(e2wtypes.WalletLocker)
+	require.True(t, isLocker)
+	err = locker.Unlock(context.Background(), []byte{})
 	require.Nil(t, err)
 
-	dump, err := wallet.(wtypes.WalletExporter).Export([]byte("dump"))
+	account1, err := wallet.(e2wtypes.WalletAccountCreator).CreateAccount(context.Background(), "Account 1", []byte{})
+	require.Nil(t, err)
+	account2, err := wallet.(e2wtypes.WalletAccountCreator).CreateAccount(context.Background(), "Account 2", []byte{})
+	require.Nil(t, err)
+
+	dump, err := wallet.(e2wtypes.WalletExporter).Export(context.Background(), []byte("dump"))
 	require.Nil(t, err)
 
 	// Import it
 	store2 := scratch.New()
-	wallet2, err := nd.Import(dump, []byte("dump"), store2, encryptor)
+	wallet2, err := nd.Import(context.Background(), dump, []byte("dump"), store2, encryptor)
 	require.Nil(t, err)
 
 	// Confirm the accounts are present
 	account1Present := false
 	account2Present := false
-	for account := range wallet2.Accounts() {
+	for account := range wallet2.Accounts(context.Background()) {
 		if account.ID().String() == account1.ID().String() {
 			account1Present = true
 		}
@@ -59,6 +62,6 @@ func TestExportWallet(t *testing.T) {
 	assert.True(t, account1Present && account2Present)
 
 	// Try to import it again; should fail
-	_, err = nd.Import(dump, []byte("dump"), store2, encryptor)
+	_, err = nd.Import(context.Background(), dump, []byte("dump"), store2, encryptor)
 	assert.NotNil(t, err)
 }

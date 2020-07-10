@@ -14,6 +14,7 @@
 package nd_test
 
 import (
+	"context"
 	"encoding/hex"
 	"testing"
 
@@ -23,7 +24,7 @@ import (
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 	nd "github.com/wealdtech/go-eth2-wallet-nd/v2"
 	scratch "github.com/wealdtech/go-eth2-wallet-store-scratch"
-	wtypes "github.com/wealdtech/go-eth2-wallet-types/v2"
+	e2wtypes "github.com/wealdtech/go-eth2-wallet-types/v2"
 )
 
 // _byteArray is a helper to turn a string in to a byte array
@@ -62,29 +63,29 @@ func TestCreateAccount(t *testing.T) {
 
 	store := scratch.New()
 	encryptor := keystorev4.New()
-	wallet, err := nd.CreateWallet("test wallet", store, encryptor)
+	wallet, err := nd.CreateWallet(context.Background(), "test wallet", store, encryptor)
 	require.Nil(t, err)
 
 	// Try to create without unlocking the wallet; should fail
-	_, err = wallet.(wtypes.WalletAccountCreator).CreateAccount("attempt", []byte("test"))
+	_, err = wallet.(e2wtypes.WalletAccountCreator).CreateAccount(context.Background(), "attempt", []byte("test"))
 	assert.NotNil(t, err)
 
-	err = wallet.Unlock(nil)
+	locker, isLocker := wallet.(e2wtypes.WalletLocker)
+	require.True(t, isLocker)
+	err = locker.Unlock(context.Background(), nil)
 	require.Nil(t, err)
-	defer wallet.Lock()
+	defer func(t *testing.T) {
+		require.NoError(t, locker.Lock(context.Background()))
+	}(t)
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			account, err := wallet.(wtypes.WalletAccountCreator).CreateAccount(test.accountName, test.passphrase)
+			account, err := wallet.(e2wtypes.WalletAccountCreator).CreateAccount(context.Background(), test.accountName, test.passphrase)
 			if test.err != nil {
 				require.NotNil(t, err)
 				assert.Equal(t, test.err.Error(), err.Error())
 			} else {
 				require.Nil(t, err)
 				assert.Equal(t, test.accountName, account.Name())
-				assert.Equal(t, "", account.Path())
-				//				assert.Equal(t, test.id, account.ID())
-				//				assert.Equal(t, test.version, account.Version())
-				//				assert.Equal(t, test.walletType, account.Type())
 			}
 		})
 	}
@@ -122,32 +123,37 @@ func TestImportAccount(t *testing.T) {
 
 	store := scratch.New()
 	encryptor := keystorev4.New()
-	wallet, err := nd.CreateWallet("test wallet", store, encryptor)
+	wallet, err := nd.CreateWallet(context.Background(), "test wallet", store, encryptor)
 	require.Nil(t, err)
 
 	// Try to import without unlocking the wallet; should fail
-	_, err = wallet.(wtypes.WalletAccountImporter).ImportAccount("attempt", _byteArray("220091d10843519cd1c452a4ec721d378d7d4c5ece81c4b5556092d410e5e0e1"), []byte("test"))
+	_, err = wallet.(e2wtypes.WalletAccountImporter).ImportAccount(context.Background(), "attempt", _byteArray("220091d10843519cd1c452a4ec721d378d7d4c5ece81c4b5556092d410e5e0e1"), []byte("test"))
 	assert.NotNil(t, err)
 
-	err = wallet.Unlock(nil)
+	locker, isLocker := wallet.(e2wtypes.WalletLocker)
+	require.True(t, isLocker)
+	err = locker.Unlock(context.Background(), nil)
 	require.Nil(t, err)
-	defer wallet.Lock()
+	defer func(t *testing.T) {
+		require.NoError(t, locker.Lock(context.Background()))
+	}(t)
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			account, err := wallet.(wtypes.WalletAccountImporter).ImportAccount(test.accountName, test.key, test.passphrase)
+			account, err := wallet.(e2wtypes.WalletAccountImporter).ImportAccount(context.Background(), test.accountName, test.key, test.passphrase)
 			if test.err != nil {
 				require.NotNil(t, err)
 				assert.Equal(t, test.err.Error(), err.Error())
 			} else {
 				require.Nil(t, err)
 				assert.Equal(t, test.accountName, account.Name())
-				assert.Equal(t, "", account.Path())
 				// Should not be able to obtain private key from a locked account
-				_, err = account.(wtypes.AccountPrivateKeyProvider).PrivateKey()
+				_, err = account.(e2wtypes.AccountPrivateKeyProvider).PrivateKey(context.Background())
 				assert.NotNil(t, err)
-				err = account.Unlock(test.passphrase)
+				locker, isLocker := account.(e2wtypes.AccountLocker)
+				require.True(t, isLocker)
+				err = locker.Unlock(context.Background(), test.passphrase)
 				require.Nil(t, err)
-				_, err := account.(wtypes.AccountPrivateKeyProvider).PrivateKey()
+				_, err := account.(e2wtypes.AccountPrivateKeyProvider).PrivateKey(context.Background())
 				assert.Nil(t, err)
 			}
 		})

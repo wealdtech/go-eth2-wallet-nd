@@ -14,6 +14,7 @@
 package nd
 
 import (
+	"context"
 	"encoding/json"
 	"os"
 	"testing"
@@ -207,10 +208,10 @@ func TestUnlock(t *testing.T) {
 			require.Nil(t, err)
 
 			// Try to sign something - should fail because locked
-			_, err = account.Sign([]byte("test"))
+			_, err = account.Sign(context.Background(), []byte("test"))
 			assert.NotNil(t, err)
 
-			err = account.Unlock(test.passphrase)
+			err = account.Unlock(context.Background(), test.passphrase)
 			if test.err != nil {
 				require.NotNil(t, err)
 				assert.Equal(t, test.err.Error(), err.Error())
@@ -218,16 +219,16 @@ func TestUnlock(t *testing.T) {
 				require.Nil(t, err)
 
 				// Try to sign something - should succeed because unlocked
-				signature, err := account.Sign([]byte("test"))
+				signature, err := account.Sign(context.Background(), []byte("test"))
 				assert.Nil(t, err)
 
 				verified := signature.Verify([]byte("test"), account.PublicKey())
 				assert.Equal(t, true, verified)
 
-				account.Lock()
+				require.NoError(t, account.Lock(context.Background()))
 
 				// Try to sign something - should fail because locked (again)
-				_, err = account.Sign([]byte("test"))
+				_, err = account.Sign(context.Background(), []byte("test"))
 				assert.NotNil(t, err)
 			}
 		})
