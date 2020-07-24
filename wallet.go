@@ -264,7 +264,7 @@ func (w *wallet) CreateAccount(ctx context.Context, name string, passphrase []by
 	}
 	a.publicKey = privateKey.PublicKey()
 	// Encrypt the private key
-	a.crypto, err = w.encryptor.Encrypt(privateKey.Marshal(), passphrase)
+	a.crypto, err = w.encryptor.Encrypt(privateKey.Marshal(), string(passphrase))
 	if err != nil {
 		return nil, err
 	}
@@ -317,7 +317,7 @@ func (w *wallet) ImportAccount(ctx context.Context, name string, key []byte, pas
 	}
 	a.publicKey = privateKey.PublicKey()
 	// Encrypt the private key
-	a.crypto, err = w.encryptor.Encrypt(privateKey.Marshal(), passphrase)
+	a.crypto, err = w.encryptor.Encrypt(privateKey.Marshal(), string(passphrase))
 	if err != nil {
 		return nil, err
 	}
