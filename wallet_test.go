@@ -18,13 +18,14 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 	nd "github.com/wealdtech/go-eth2-wallet-nd/v2"
 	scratch "github.com/wealdtech/go-eth2-wallet-store-scratch"
 	e2wtypes "github.com/wealdtech/go-eth2-wallet-types/v2"
 )
 
-func TestInterfaces(t *testing.T) {
+func TestWalletInterfaces(t *testing.T) {
 	store := scratch.New()
 	encryptor := keystorev4.New()
 	wallet, err := nd.CreateWallet(context.Background(), "test wallet", store, encryptor)
@@ -52,6 +53,8 @@ func TestInterfaces(t *testing.T) {
 	assert.True(t, isWalletExporter)
 	_, isWalletAccountImporter := wallet.(e2wtypes.WalletAccountImporter)
 	assert.True(t, isWalletAccountImporter)
+	_, isStoreProvider := wallet.(e2wtypes.StoreProvider)
+	assert.True(t, isStoreProvider)
 }
 
 func TestCreateWallet(t *testing.T) {
@@ -62,8 +65,36 @@ func TestCreateWallet(t *testing.T) {
 
 	assert.Equal(t, "test wallet", wallet.Name())
 	assert.Equal(t, uint(1), wallet.Version())
+	assert.Equal(t, store.Name(), wallet.(e2wtypes.StoreProvider).Store().Name())
 
 	// Try to create another wallet with the same name; should error
 	_, err = nd.CreateWallet(context.Background(), "test wallet", store, encryptor)
 	assert.NotNil(t, err)
+}
+
+func TestWalletUnlockLock(t *testing.T) {
+	store := scratch.New()
+	encryptor := keystorev4.New()
+	wallet, err := nd.CreateWallet(context.Background(), "test wallet", store, encryptor)
+	require.NoError(t, err)
+
+	unlocked, err := wallet.(e2wtypes.WalletLocker).IsUnlocked(context.Background())
+	require.NoError(t, err)
+	require.False(t, unlocked)
+
+	// Unlock.
+	require.NoError(t, wallet.(e2wtypes.WalletLocker).Unlock(context.Background(), nil))
+	unlocked, err = wallet.(e2wtypes.WalletLocker).IsUnlocked(context.Background())
+	require.NoError(t, err)
+	require.True(t, unlocked)
+	// Unlock again.
+	require.NoError(t, wallet.(e2wtypes.WalletLocker).Unlock(context.Background(), nil))
+	unlocked, err = wallet.(e2wtypes.WalletLocker).IsUnlocked(context.Background())
+	require.NoError(t, err)
+	require.True(t, unlocked)
+	// Lock
+	require.NoError(t, wallet.(e2wtypes.WalletLocker).Lock(context.Background()))
+	unlocked, err = wallet.(e2wtypes.WalletLocker).IsUnlocked(context.Background())
+	require.NoError(t, err)
+	require.False(t, unlocked)
 }

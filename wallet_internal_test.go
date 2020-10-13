@@ -14,13 +14,22 @@
 package nd
 
 import (
+	"context"
 	"encoding/json"
+	"fmt"
+	"math/rand"
+	"os"
+	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
+	filesystem "github.com/wealdtech/go-eth2-wallet-store-filesystem"
+	e2wtypes "github.com/wealdtech/go-eth2-wallet-types/v2"
 )
 
 func TestUnmarshalWallet(t *testing.T) {
@@ -130,4 +139,58 @@ func TestUnmarshalWallet(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestRetrieveAccountsIndex(t *testing.T) {
+	rand.Seed(time.Now().Unix())
+	// #nosec G404
+	path := filepath.Join(os.TempDir(), fmt.Sprintf("TestRetrieveAccountsIndex-%d", rand.Int31()))
+	defer os.RemoveAll(path)
+	store := filesystem.New(filesystem.WithLocation(path))
+	encryptor := keystorev4.New()
+	w, err := CreateWallet(context.Background(), "test wallet", store, encryptor)
+	require.NoError(t, err)
+	require.NoError(t, w.(e2wtypes.WalletLocker).Unlock(context.Background(), nil))
+
+	account1, err := w.(e2wtypes.WalletAccountCreator).CreateAccount(context.Background(), "account1", []byte("test"))
+	require.NoError(t, err)
+
+	account2, err := w.(e2wtypes.WalletAccountCreator).CreateAccount(context.Background(), "account2", []byte("test"))
+	require.NoError(t, err)
+
+	idx, found := w.(*wallet).index.ID(account1.Name())
+	require.True(t, found)
+	require.Equal(t, account1.ID(), idx)
+
+	idx, found = w.(*wallet).index.ID(account2.Name())
+	require.True(t, found)
+	require.Equal(t, account2.ID(), idx)
+
+	_, found = w.(*wallet).index.ID("not present")
+	require.False(t, found)
+
+	// Manually delete the wallet index.
+	indexPath := filepath.Join(path, w.ID().String(), "index")
+	_, err = os.Stat(indexPath)
+	require.False(t, os.IsNotExist(err))
+	os.Remove(indexPath)
+	_, err = os.Stat(indexPath)
+	require.True(t, os.IsNotExist(err))
+
+	// Re-open the wallet with a new store, to force re-creation of the index.
+	store = filesystem.New(filesystem.WithLocation(path))
+	w, err = OpenWallet(context.Background(), "test wallet", store, encryptor)
+	require.NoError(t, err)
+
+	require.NoError(t, w.(*wallet).retrieveAccountsIndex(context.Background()))
+	idx, found = w.(*wallet).index.ID(account1.Name())
+	require.True(t, found)
+	require.Equal(t, account1.ID(), idx)
+
+	idx, found = w.(*wallet).index.ID(account2.Name())
+	require.True(t, found)
+	require.Equal(t, account2.ID(), idx)
+
+	_, found = w.(*wallet).index.ID("not present")
+	require.False(t, found)
 }
