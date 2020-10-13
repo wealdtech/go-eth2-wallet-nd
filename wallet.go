@@ -240,11 +240,7 @@ func (w *wallet) CreateAccount(ctx context.Context, name string, passphrase []by
 	if strings.HasPrefix(name, "_") {
 		return nil, fmt.Errorf("invalid account name %q", name)
 	}
-	unlocked, err := w.IsUnlocked(ctx)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to access unlock status")
-	}
-	if !unlocked {
+	if !w.unlocked {
 		return nil, errors.New("wallet must be unlocked to create accounts")
 	}
 
@@ -254,6 +250,7 @@ func (w *wallet) CreateAccount(ctx context.Context, name string, passphrase []by
 	}
 
 	a := newAccount()
+	var err error
 	if a.id, err = uuid.NewRandom(); err != nil {
 		return nil, err
 	}
@@ -291,16 +288,12 @@ func (w *wallet) ImportAccount(ctx context.Context, name string, key []byte, pas
 	if strings.HasPrefix(name, "_") {
 		return nil, fmt.Errorf("invalid account name %q", name)
 	}
-	unlocked, err := w.IsUnlocked(ctx)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to access unlock status")
-	}
-	if !unlocked {
+	if !w.unlocked {
 		return nil, errors.New("wallet must be unlocked to import accounts")
 	}
 
 	// Ensure that we don't already have an account with this name
-	_, err = w.AccountByName(ctx, name)
+	_, err := w.AccountByName(ctx, name)
 	if err == nil {
 		return nil, fmt.Errorf("account with name %q already exists", name)
 	}
