@@ -192,6 +192,11 @@ func (a *account) Unlock(ctx context.Context, passphrase []byte) error {
 	a.mutex.Lock()
 	defer a.mutex.Unlock()
 
+	// If the account is already unlocked then nothing to do.
+	if a.secretKey != nil {
+		return nil
+	}
+
 	secretBytes, err := a.encryptor.Decrypt(a.crypto, string(passphrase))
 	if err != nil {
 		return errors.New("incorrect passphrase")
