@@ -224,11 +224,7 @@ func (w *wallet) storeWallet() error {
 		return err
 	}
 
-	if err := w.store.StoreWallet(w.ID(), w.Name(), data); err != nil {
-		return err
-	}
-
-	return nil
+	return w.store.StoreWallet(w.ID(), w.Name(), data)
 }
 
 // CreateAccount creates a new account in the wallet.
@@ -461,8 +457,5 @@ func (w *wallet) storeAccountsIndex() error {
 	if err != nil {
 		return err
 	}
-	if err := w.store.StoreAccountsIndex(w.id, serializedIndex); err != nil {
-		return err
-	}
-	return nil
+	return w.store.StoreAccountsIndex(w.id, serializedIndex)
 }

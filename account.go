@@ -248,10 +248,7 @@ func (a *account) storeAccount() error {
 	if err := a.wallet.(*wallet).storeAccountsIndex(); err != nil {
 		return err
 	}
-	if err := a.wallet.(*wallet).store.StoreAccount(a.wallet.ID(), a.ID(), data); err != nil {
-		return err
-	}
-	return nil
+	return a.wallet.(*wallet).store.StoreAccount(a.wallet.ID(), a.ID(), data)
 }
 
 // deserializeAccount deserializes account data to an account.
