@@ -21,7 +21,6 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
-	"time"
 
 	"github.com/google/uuid"
 	"github.com/pkg/errors"
@@ -142,7 +141,6 @@ func TestUnmarshalWallet(t *testing.T) {
 }
 
 func TestRetrieveAccountsIndex(t *testing.T) {
-	rand.Seed(time.Now().Unix())
 	// #nosec G404
 	path := filepath.Join(os.TempDir(), fmt.Sprintf("TestRetrieveAccountsIndex-%d", rand.Int31()))
 	defer os.RemoveAll(path)
