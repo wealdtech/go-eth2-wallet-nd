@@ -3,8 +3,6 @@
 [![Tag](https://img.shields.io/github/tag/wealdtech/go-eth2-wallet-nd.svg)](https://github.com/wealdtech/go-eth2-wallet-nd/releases/)
 [![License](https://img.shields.io/github/license/wealdtech/go-eth2-wallet-nd.svg)](LICENSE)
 [![GoDoc](https://godoc.org/github.com/wealdtech/go-eth2-wallet-nd?status.svg)](https://godoc.org/github.com/wealdtech/go-eth2-wallet-nd)
-[![Travis CI](https://img.shields.io/travis/wealdtech/go-eth2-wallet-nd.svg)](https://travis-ci.org/wealdtech/go-eth2-wallet-nd)
-[![codecov.io](https://img.shields.io/codecov/c/github/wealdtech/go-eth2-wallet-nd.svg)](https://codecov.io/github/wealdtech/go-eth2-wallet-nd)
 [![Go Report Card](https://goreportcard.com/badge/github.com/wealdtech/go-eth2-wallet-nd)](https://goreportcard.com/report/github.com/wealdtech/go-eth2-wallet-nd)
 
 Non-deterministic [Ethereum 2 wallet](https://github.com/wealdtech/go-eth2-wallet).

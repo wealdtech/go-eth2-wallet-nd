@@ -67,7 +67,7 @@ func TestUnmarshalWallet(t *testing.T) {
 		{
 			name:  "BadID",
 			input: []byte(`{"uuid":"bad","name":"Bad","type":"non-deterministic","version":1}`),
-			err:   errors.New("invalid UUID length: 3"),
+			err:   errors.New("failed to parse wallet ID: invalid UUID length: 3"),
 		},
 		{
 			name:  "WrongOldID",
@@ -77,7 +77,7 @@ func TestUnmarshalWallet(t *testing.T) {
 		{
 			name:  "BadOldID",
 			input: []byte(`{"id":"bad","name":"Bad","type":"non-deterministic","version":1}`),
-			err:   errors.New("invalid UUID length: 3"),
+			err:   errors.New("failed to parse wallet ID: invalid UUID length: 3"),
 		},
 		{
 			name:  "MissingName",

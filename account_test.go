@@ -16,6 +16,9 @@ package nd_test
 import (
 	"context"
 	"encoding/hex"
+	"fmt"
+	"math/rand"
+	"sync"
 	"testing"
 
 	"github.com/pkg/errors"
@@ -96,7 +99,7 @@ func TestCreateAccount(t *testing.T) {
 	wallet, err := nd.CreateWallet(context.Background(), "test wallet", store, encryptor)
 	require.Nil(t, err)
 
-	// Try to create without unlocking the wallet; should fail
+	// Try to create without unlocking the wallet; should fail.
 	_, err = wallet.(e2wtypes.WalletAccountCreator).CreateAccount(context.Background(), "attempt", []byte("test"))
 	assert.NotNil(t, err)
 
@@ -217,4 +220,54 @@ func TestImportAccount(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestConcurrentCreate(t *testing.T) {
+	store := scratch.New()
+	encryptor := keystorev4.New()
+	wallet, err := nd.CreateWallet(context.Background(), "test wallet", store, encryptor)
+	require.NoError(t, err)
+	locker, isLocker := wallet.(e2wtypes.WalletLocker)
+	require.True(t, isLocker)
+	require.NoError(t, locker.Unlock(context.Background(), nil))
+
+	// Create a number of runners that will try to create accounts simultaneously.
+	var runWG sync.WaitGroup
+	var setupWG sync.WaitGroup
+	starter := make(chan any)
+	numAccounts := 64
+	for i := 0; i < numAccounts; i++ {
+		setupWG.Add(1)
+		runWG.Add(1)
+		go func() {
+			id := rand.Uint32()
+			name := fmt.Sprintf("Test account %d", id)
+			setupWG.Done()
+
+			<-starter
+
+			account, err := wallet.(e2wtypes.WalletAccountCreator).CreateAccount(context.Background(), name, []byte("test"))
+			require.NoError(t, err)
+			require.NotNil(t, account)
+			runWG.Done()
+		}()
+	}
+
+	// Wait for setup to complete.
+	setupWG.Wait()
+
+	// Start the jobs by closing the channel.
+	close(starter)
+
+	// Wait for run to complete
+	runWG.Wait()
+
+	// Confirm that all accounts have been created.
+	wallet, err = nd.OpenWallet(context.Background(), "test wallet", store, encryptor)
+	require.NoError(t, err)
+	accounts := 0
+	for range wallet.Accounts(context.Background()) {
+		accounts++
+	}
+	require.Equal(t, numAccounts, accounts)
 }
